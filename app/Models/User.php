@@ -56,6 +56,8 @@ class User extends Authenticatable
     }
     public function colocations()
     {
-        return $this->belongsToMany(Colocation::class)->withPivot('role', 'joined_at');
+        // include left_at so we can tell when a user left a colocation
+        return $this->belongsToMany(Colocation::class)
+                    ->withPivot('role', 'joined_at', 'left_at');
     }
 }

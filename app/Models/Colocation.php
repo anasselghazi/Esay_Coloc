@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Colocation extends Model
 {
+    use HasFactory;
 
-    protected $fillable = ['name', 'status', 'owner_id'];
+    protected $fillable = ['nom', 'status', 'owner_id'];
 
  
    public function owner()

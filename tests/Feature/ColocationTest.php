@@ -1,0 +1,112 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Colocation;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class ColocationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_user_can_create_a_colocation(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->post('/colocations', [
+                'name' => 'My House',
+            ]);
+
+        $colocation = Colocation::first();
+
+        $response->assertRedirect(route('colocations.show', $colocation));
+        $this->assertNotNull($colocation);
+        $this->assertSame('My House', $colocation->nom);
+        $this->assertSame($user->id, $colocation->owner_id);
+
+        // pivot record exists with owner role
+        $this->assertDatabaseHas('colocation_user', [
+            'colocation_id' => $colocation->id,
+            'user_id' => $user->id,
+            'role' => 'owner',
+        ]);
+    }
+
+    public function test_user_cannot_have_two_active_colocations(): void
+    {
+        $user = User::factory()->create();
+
+        $this
+            ->actingAs($user)
+            ->post('/colocations', ['name' => 'First']);
+
+        $response = $this
+            ->actingAs($user)
+            ->post('/colocations', ['name' => 'Second']);
+
+        $response->assertSessionHasErrors();
+        $this->assertCount(1, Colocation::where('owner_id', $user->id)->get());
+    }
+
+    public function test_user_can_join_and_leave_a_colocation(): void
+    {
+        $owner = User::factory()->create();
+        $colocation = Colocation::factory()->create(['owner_id' => $owner->id]);
+        $colocation->member()->attach($owner->id, ['role' => 'owner', 'joined_at' => now()]);
+
+        $member = User::factory()->create();
+
+        // join
+        $this
+            ->actingAs($member)
+            ->post(route('colocations.join', $colocation));
+
+        $this->assertDatabaseHas('colocation_user', [
+            'colocation_id' => $colocation->id,
+            'user_id' => $member->id,
+            'role' => 'member',
+            'left_at' => null,
+        ]);
+
+        // leave
+        $this
+            ->actingAs($member)
+            ->post(route('colocations.leave', $colocation));
+
+        $this->assertDatabaseMissing('colocation_user', [
+            'colocation_id' => $colocation->id,
+            'user_id' => $member->id,
+            'left_at' => null,
+        ]);
+
+        $this->assertDatabaseHas('colocation_user', [
+            'colocation_id' => $colocation->id,
+            'user_id' => $member->id,
+        // left_at is not null so we just assert the other fields
+        ]);
+    }
+
+    public function test_only_owner_can_cancel_colocation(): void
+    {
+        $owner = User::factory()->create();
+        $colocation = Colocation::factory()->create(['owner_id' => $owner->id]);
+
+        // owner cancels
+        $this
+            ->actingAs($owner)
+            ->post(route('colocations.cancel', $colocation));
+
+        $this->assertSame('cancelled', $colocation->fresh()->status);
+
+        // another user cannot
+        $other = User::factory()->create();
+        $response = $this
+            ->actingAs($other)
+            ->post(route('colocations.cancel', $colocation));
+        $response->assertStatus(403);
+    }
+}

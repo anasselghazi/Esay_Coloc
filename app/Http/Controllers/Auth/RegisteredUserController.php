@@ -31,13 +31,22 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'pseudo' => ['required', 'string', 'max:255', 'unique:users,pseudo'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'photo' => ['nullable', 'image', 'max:1024'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $photoPath = null;
+        if ($request->hasFile('photo')) {
+            $photoPath = $request->file('photo')->store('profile-photos', 'public');
+        }
+
         $user = User::create([
             'name' => $request->name,
+            'pseudo' => $request->pseudo,
             'email' => $request->email,
+            'photo' => $photoPath,
             'password' => Hash::make($request->password),
         ]);
 
