@@ -21,6 +21,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'pseudo',
+        'photo'
     ];
 
     /**
@@ -44,5 +46,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+
+    public function ownedColocations()
+    {
+        return $this->hasMany(Colocation::class,'owner_id');
+
+    }
+    public function colocations()
+    {
+        return $this->belongsToMany(Colocation::class)->withPivot('role', 'joined_at');
     }
 }
