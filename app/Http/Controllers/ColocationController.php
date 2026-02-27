@@ -123,6 +123,15 @@ class ColocationController extends Controller
             'left_at' => now(),
         ]);
 
+        // reputation adjustment
+        $balance = $colocation->balanceForUser($user->id);
+        if ($balance < -0.01) {
+            $user->reputation -= 1;
+        } else {
+            $user->reputation += 1;
+        }
+        $user->save();
+
         return redirect()->route('colocations.index')->with('status', 'Vous avez quitté la colocation.');
     }
 
@@ -137,10 +146,121 @@ class ColocationController extends Controller
             abort(403);
         }
 
+        // Mark all members as left and adjust reputation
+        foreach ($colocation->getActiveMembers() as $member) {
+            $colocation->member()->updateExistingPivot($member->id, ['left_at' => now()]);
+            $balance = $colocation->balanceForUser($member->id);
+            if ($balance < -0.01) {
+                $member->reputation -= 1;
+            } else {
+                $member->reputation += 1;
+            }
+            $member->save();
+        }
+
         $colocation->status = 'cancelled';
         $colocation->save();
 
         return redirect()->route('colocations.index')->with('status', 'Colocation annulée.');
+    }
+
+    /**
+     * Remove a member from colocation (owner only).
+     */
+    public function removeMember(Colocation $colocation, Request $request)
+    {
+        $user = Auth::user();
+
+        if ($colocation->owner_id !== $user->id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $userId = $validated['user_id'];
+
+        // Can't remove owner
+        if ($userId === $colocation->owner_id) {
+            return redirect()->back()->withErrors(['Impossible de retirer le propriétaire.']);
+        }
+
+        $member = $colocation->member()->find($userId);
+        if (!$member) {
+            return redirect()->back()->withErrors(['Membre non trouvé.']);
+        }
+
+        // Mark member as left
+        $colocation->member()->updateExistingPivot($userId, ['left_at' => now()]);
+
+        // adjust reputation depending on balance
+        $memberUser = \App\Models\User::find($userId);
+        $balance = $colocation->balanceForUser($userId);
+        if ($balance < -0.01) {
+            $memberUser->reputation -= 1;
+        } else {
+            $memberUser->reputation += 1;
+        }
+        $memberUser->save();
+
+        return redirect()
+            ->route('colocations.show', $colocation)
+            ->with('status', 'Membre retiré.');
+    }
+
+    /**
+     * Update colocation (owner only)
+     */
+    public function update(Colocation $colocation, Request $request)
+    {
+        $user = Auth::user();
+
+        if ($colocation->owner_id !== $user->id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $colocation->update(['nom' => $validated['name']]);
+
+        return redirect()
+            ->route('colocations.show', $colocation)
+            ->with('status', 'Colocation mise à jour.');
+    }
+
+    /**
+     * Edit colocation form (owner only)
+     */
+    public function edit(Colocation $colocation)
+    {
+        $user = Auth::user();
+
+        if ($colocation->owner_id !== $user->id) {
+            abort(403);
+        }
+
+        return view('colocations.edit', compact('colocation'));
+    }
+
+    /**
+     * Delete/destroy colocation (owner only)
+     */
+    public function destroy(Colocation $colocation)
+    {
+        $user = Auth::user();
+
+        if ($colocation->owner_id !== $user->id) {
+            abort(403);
+        }
+
+        $colocation->delete();
+
+        return redirect()
+            ->route('colocations.index')
+            ->with('status', 'Colocation supprimée.');
     }
 }
 

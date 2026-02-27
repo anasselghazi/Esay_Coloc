@@ -22,7 +22,9 @@ class User extends Authenticatable
         'email',
         'password',
         'pseudo',
-        'photo'
+        'photo',
+        'reputation',
+        'status'
     ];
 
     /**
@@ -59,5 +61,30 @@ class User extends Authenticatable
         // include left_at so we can tell when a user left a colocation
         return $this->belongsToMany(Colocation::class)
                     ->withPivot('role', 'joined_at', 'left_at');
+    }
+
+    public function expenses()
+    {
+        return $this->hasMany(Expense::class, 'payer_id');
+    }
+
+    public function invitationsSent()
+    {
+        return $this->hasMany(Invitation::class, 'invited_by');
+    }
+
+    public function paymentsFrom()
+    {
+        return $this->hasMany(Payment::class, 'from_user_id');
+    }
+
+    public function paymentsTo()
+    {
+        return $this->hasMany(Payment::class, 'to_user_id');
+    }
+
+    public function isBanned()
+    {
+        return $this->status === 'banned';
     }
 }
