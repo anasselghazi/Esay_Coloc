@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Colocation;
+use \App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,13 +11,13 @@ class ColocationController extends Controller
 {
     public function __construct()
     {
-        // all actions require authentication
+        
         $this->middleware('auth');
     }
 
-    /**
-     * Display a listing of the authenticated user’s active colocations.
-     */
+    
+     
+     
     public function index()
     {
         $user = Auth::user();
@@ -28,17 +29,16 @@ class ColocationController extends Controller
         return view('colocations.index', compact('colocations'));
     }
 
-    /**
-     * Show the form for creating a new colocation.
-     */
+    
+     //  creating a new colocation.
+     
     public function create()
     {
         return view('colocations.create');
     }
 
-    /**
-     * Store a newly created colocation in storage.
-     */
+    
+     //  Store colocation
     public function store(Request $request)
     {
         $request->validate([
@@ -47,7 +47,7 @@ class ColocationController extends Controller
 
         $user = $request->user();
 
-        // a user may only have one active colocation
+        // USER HAVE ONE COLOCATION ACTIVE 
         $exists = $user->colocations()
             ->where('status', 'active')
             ->wherePivot('left_at', null)
@@ -62,7 +62,7 @@ class ColocationController extends Controller
             'owner_id' => $user->id,
         ]);
 
-        // owner is automatically attached as member
+        // Add owner  as member in colocation
         $colocation->member()->attach($user->id, [
             'role' => 'owner',
             'joined_at' => now(),
@@ -71,18 +71,18 @@ class ColocationController extends Controller
         return redirect()->route('colocations.show', $colocation);
     }
 
-    /**
-     * Display the specified colocation.
-     */
+    
+     // show all member in  colocation.
+     
     public function show(Colocation $colocation)
     {
         $colocation->load('member');
         return view('colocations.show', compact('colocation'));
     }
 
-    /**
-     * Join the authenticated user to the given colocation.
-     */
+    // virifay member after join 
+     
+     
     public function join(Colocation $colocation)
     {
         $user = Auth::user();
@@ -108,9 +108,9 @@ class ColocationController extends Controller
         return redirect()->route('colocations.show', $colocation);
     }
 
-    /**
-     * Mark the authenticated user as having left the colocation.
-     */
+    
+      // verfiy befor left 
+     
     public function leave(Colocation $colocation)
     {
         $user = Auth::user();
@@ -123,9 +123,9 @@ class ColocationController extends Controller
             'left_at' => now(),
         ]);
 
-        // reputation adjustment
+        // reputation 
         $balance = $colocation->balanceForUser($user->id);
-        if ($balance < -0.01) {
+        if ($balance < -1) {
             $user->reputation -= 1;
         } else {
             $user->reputation += 1;
@@ -135,9 +135,9 @@ class ColocationController extends Controller
         return redirect()->route('colocations.index')->with('status', 'Vous avez quitté la colocation.');
     }
 
-    /**
-     * Cancel the colocation (owner only).
-     */
+    
+      // Only owner can cancel colocation 
+     
     public function cancel(Colocation $colocation)
     {
         $user = Auth::user();
@@ -146,11 +146,12 @@ class ColocationController extends Controller
             abort(403);
         }
 
-        // Mark all members as left and adjust reputation
+        // Mark all members as left and change  reputation
+
         foreach ($colocation->getActiveMembers() as $member) {
             $colocation->member()->updateExistingPivot($member->id, ['left_at' => now()]);
             $balance = $colocation->balanceForUser($member->id);
-            if ($balance < -0.01) {
+            if ($balance < -1) {
                 $member->reputation -= 1;
             } else {
                 $member->reputation += 1;
@@ -164,9 +165,9 @@ class ColocationController extends Controller
         return redirect()->route('colocations.index')->with('status', 'Colocation annulée.');
     }
 
-    /**
-     * Remove a member from colocation (owner only).
-     */
+    
+     // Remove  member
+     
     public function removeMember(Colocation $colocation, Request $request)
     {
         $user = Auth::user();
@@ -181,9 +182,10 @@ class ColocationController extends Controller
 
         $userId = $validated['user_id'];
 
-        // Can't remove owner
+        // CanT remove owner
+
         if ($userId === $colocation->owner_id) {
-            return redirect()->back()->withErrors(['Impossible de retirer le propriétaire.']);
+            return redirect()->back()->withErrors(['Impossible de retirer le owner.']);
         }
 
         $member = $colocation->member()->find($userId);
@@ -191,13 +193,14 @@ class ColocationController extends Controller
             return redirect()->back()->withErrors(['Membre non trouvé.']);
         }
 
-        // Mark member as left
+        //  member as left
         $colocation->member()->updateExistingPivot($userId, ['left_at' => now()]);
 
-        // adjust reputation depending on balance
-        $memberUser = \App\Models\User::find($userId);
+        //reputation 
+
+        $memberUser = find($userId);
         $balance = $colocation->balanceForUser($userId);
-        if ($balance < -0.01) {
+        if ($balance < -1) {
             $memberUser->reputation -= 1;
         } else {
             $memberUser->reputation += 1;
@@ -209,9 +212,9 @@ class ColocationController extends Controller
             ->with('status', 'Membre retiré.');
     }
 
-    /**
-     * Update colocation (owner only)
-     */
+    
+     // Update colocation 
+     
     public function update(Colocation $colocation, Request $request)
     {
         $user = Auth::user();
@@ -231,9 +234,9 @@ class ColocationController extends Controller
             ->with('status', 'Colocation mise à jour.');
     }
 
-    /**
-     * Edit colocation form (owner only)
-     */
+    
+     //Edit colocation form (owner only)
+     
     public function edit(Colocation $colocation)
     {
         $user = Auth::user();
@@ -245,9 +248,8 @@ class ColocationController extends Controller
         return view('colocations.edit', compact('colocation'));
     }
 
-    /**
-     * Delete/destroy colocation (owner only)
-     */
+    // DELETE
+
     public function destroy(Colocation $colocation)
     {
         $user = Auth::user();

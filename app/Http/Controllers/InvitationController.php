@@ -17,12 +17,12 @@ class InvitationController extends Controller
         $this->middleware('auth');
     }
 
-    /**
-     * Show invitations for a colocation
-     */
+    
+     // Show invitations for a colocation
+     
     public function index(Colocation $colocation)
     {
-        // Check authorization - owner only
+        
         if ($colocation->owner_id !== Auth::id()) {
             abort(403);
         }
@@ -31,12 +31,12 @@ class InvitationController extends Controller
         return view('invitations.index', compact('colocation', 'invitations'));
     }
 
-    /**
-     * Show create invitation form
-     */
+    
+     // Show create invitation form
+    
     public function create(Colocation $colocation)
     {
-        // Check authorization - owner only
+        
         if ($colocation->owner_id !== Auth::id()) {
             abort(403);
         }
@@ -44,12 +44,12 @@ class InvitationController extends Controller
         return view('invitations.create', compact('colocation'));
     }
 
-    /**
-     * Send invitation
-     */
+    
+     // Send invitation
+     
     public function store(Request $request, Colocation $colocation)
     {
-        // Check authorization - owner only
+        
         if ($colocation->owner_id !== Auth::id()) {
             abort(403);
         }
@@ -67,7 +67,7 @@ class InvitationController extends Controller
             return redirect()->back()->withErrors(['email' => 'Cet utilisateur a déjà une colocation active.']);
         }
 
-        // Delete existing pending invitations
+        // Delete  pending invitations
         Invitation::where('colocation_id', $colocation->id)
             ->where('email', $validated['email'])
             ->where('status', 'pending')
@@ -94,7 +94,7 @@ class InvitationController extends Controller
                     ->subject("Invitation à rejoindre {$colocation->nom}");
             });
         } catch (\Exception $e) {
-            // Log::error('Failed to send invitation email: ' . $e->getMessage());
+            
         }
 
         return redirect()
@@ -102,9 +102,9 @@ class InvitationController extends Controller
             ->with('status', 'Invitation envoyée à ' . $validated['email']);
     }
 
-    /**
-     * Accept invitation
-     */
+    
+     // Accept invitation
+     
     public function accept(Request $request)
     {
         $validated = $request->validate([
@@ -116,25 +116,25 @@ class InvitationController extends Controller
             ->where('email', $validated['email'])
             ->firstOrFail();
 
-        // Check if expired
+        // Check  expired
         if ($invitation->isExpired()) {
             return redirect()->route('dashboard')->with('error', 'Cette invitation a expiré.');
         }
 
-        // Check if already accepted/declined
+        // Check if  accepted/declined
         if ($invitation->status !== 'pending') {
             return redirect()->route('dashboard')->with('error', 'Cette invitation a déjà été traitée.');
         }
 
         $user = Auth::user();
 
-        // Check if authenticated user email matches invitation email
+        // Check if the same email
         if ($user->email !== $validated['email']) {
             Auth::logout();
             return redirect()->route('login')->with('error', 'Veuillez vous connecter avec l\'email associé à l\'invitation.');
         }
 
-        // Check if user has active colocation
+        // Check  user have active colocation
         if ($user->colocations()
             ->where('status', 'active')
             ->wherePivot('left_at', null)
@@ -155,9 +155,9 @@ class InvitationController extends Controller
             ->with('status', 'Invitation acceptée!');
     }
 
-    /**
-     * Decline invitation
-     */
+    
+     // Decline invitation
+     
     public function decline(Request $request)
     {
         $validated = $request->validate([
@@ -169,12 +169,12 @@ class InvitationController extends Controller
             ->where('email', $validated['email'])
             ->firstOrFail();
 
-        // Check if expired
+        
         if ($invitation->isExpired()) {
             return redirect()->route('dashboard')->with('error', 'Cette invitation a expiré.');
         }
 
-        // Check if already accepted/declined
+        
         if ($invitation->status !== 'pending') {
             return redirect()->route('dashboard')->with('error', 'Cette invitation a déjà été traitée.');
         }
@@ -186,12 +186,32 @@ class InvitationController extends Controller
             ->with('status', 'Invitation refusée.');
     }
 
-    /**
-     * Delete invitation (owner only)
-     */
+
+    public function respondForm(Request $request)
+{
+    $validated = $request->validate([
+        'token' => 'required|string|exists:invitations,token',
+        'email' => 'required|email',
+    ]);
+
+    $invitation = Invitation::with('colocation', 'invitedBy')      
+        ->where('token', $validated['token'])
+        ->where('email', $validated['email'])
+        ->firstOrFail();
+
+    return view('invitations.respond', [
+        'invitation' => $invitation,
+        'colocation' => $invitation->colocation, 
+        'email' => $validated['email'],
+        'token' => $validated['token']
+    ]);
+}
+    
+     // Delete invitation (owner only)
+    
     public function destroy(Colocation $colocation, Invitation $invitation)
     {
-        // Check authorization
+    
         if ($colocation->owner_id !== Auth::id() || $invitation->colocation_id !== $colocation->id) {
             abort(403);
         }

@@ -15,12 +15,12 @@ class ExpenseController extends Controller
         $this->middleware('auth');
     }
 
-    /**
-     * Display all expenses for a colocation
-     */
+    
+     // expenses for a colocation
+     
     public function index(Colocation $colocation)
     {
-        // Check authorization
+        
         if (!$colocation->isMemberActive(Auth::id())) {
             abort(403);
         }
@@ -50,7 +50,7 @@ class ExpenseController extends Controller
      */
     public function create(Colocation $colocation)
     {
-        // Check authorization
+        
         if (!$colocation->isMemberActive(Auth::id())) {
             abort(403);
         }
@@ -59,12 +59,12 @@ class ExpenseController extends Controller
         return view('expenses.create', compact('colocation', 'categories'));
     }
 
-    /**
-     * Store a new expense
-     */
+    
+     // Store a new expense
+     
     public function store(Request $request, Colocation $colocation)
     {
-        // Check authorization
+        
         if (!$colocation->isMemberActive(Auth::id())) {
             abort(403);
         }
@@ -87,12 +87,12 @@ class ExpenseController extends Controller
             ->with('status', 'Dépense ajoutée avec succès.');
     }
 
-    /**
-     * Edit expense form
-     */
+    
+     // Edit expense form
+     
     public function edit(Colocation $colocation, Expense $expense)
     {
-        // Check authorization
+        
         if ($expense->colocation_id !== $colocation->id || 
             ($expense->payer_id !== Auth::id() && $colocation->owner_id !== Auth::id())) {
             abort(403);
@@ -102,12 +102,12 @@ class ExpenseController extends Controller
         return view('expenses.edit', compact('colocation', 'expense', 'categories'));
     }
 
-    /**
-     * Update expense
-     */
+    
+     // Update expense
+     
     public function update(Request $request, Colocation $colocation, Expense $expense)
     {
-        // Check authorization
+        
         if ($expense->colocation_id !== $colocation->id || 
             ($expense->payer_id !== Auth::id() && $colocation->owner_id !== Auth::id())) {
             abort(403);
@@ -128,12 +128,12 @@ class ExpenseController extends Controller
             ->with('status', 'Dépense mise à jour avec succès.');
     }
 
-    /**
-     * Delete expense
-     */
+    
+     // Delete expense
+     
     public function destroy(Colocation $colocation, Expense $expense)
     {
-        // Check authorization
+        
         if ($expense->colocation_id !== $colocation->id || 
             ($expense->payer_id !== Auth::id() && $colocation->owner_id !== Auth::id())) {
             abort(403);

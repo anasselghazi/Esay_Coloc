@@ -14,12 +14,10 @@ class CategoryController extends Controller
         $this->middleware('auth');
     }
 
-    /**
-     * Display categories for a colocation
-     */
+    
     public function index(Colocation $colocation)
     {
-        // Check authorization - owner only
+        
         if ($colocation->owner_id !== Auth::id()) {
             abort(403);
         }
@@ -28,12 +26,12 @@ class CategoryController extends Controller
         return view('categories.index', compact('colocation', 'categories'));
     }
 
-    /**
-     * Show create category form
-     */
+    
+     // Show create category form
+     
     public function create(Colocation $colocation)
     {
-        // Check authorization - owner only
+        
         if ($colocation->owner_id !== Auth::id()) {
             abort(403);
         }
@@ -41,12 +39,12 @@ class CategoryController extends Controller
         return view('categories.create', compact('colocation'));
     }
 
-    /**
-     * Store a new category
-     */
+    
+     // Store a new category
+    
     public function store(Request $request, Colocation $colocation)
     {
-        // Check authorization - owner only
+        
         if ($colocation->owner_id !== Auth::id()) {
             abort(403);
         }
@@ -72,12 +70,12 @@ class CategoryController extends Controller
             ->with('status', 'Catégorie créée.');
     }
 
-    /**
-     * Edit category form
-     */
+    
+     // show edit category form
+     
     public function edit(Colocation $colocation, Category $category)
     {
-        // Check authorization - owner only
+        
         if ($colocation->owner_id !== Auth::id() || $category->colocation_id !== $colocation->id) {
             abort(403);
         }
@@ -85,12 +83,12 @@ class CategoryController extends Controller
         return view('categories.edit', compact('colocation', 'category'));
     }
 
-    /**
-     * Update category
-     */
+    
+     // Update category
+     
     public function update(Request $request, Colocation $colocation, Category $category)
     {
-        // Check authorization - owner only
+        
         if ($colocation->owner_id !== Auth::id() || $category->colocation_id !== $colocation->id) {
             abort(403);
         }
@@ -108,12 +106,12 @@ class CategoryController extends Controller
             ->with('status', 'Catégorie mise à jour.');
     }
 
-    /**
-     * Delete category
-     */
+    
+     // Delete category
+     
     public function destroy(Colocation $colocation, Category $category)
     {
-        // Check authorization - owner only
+        
         if ($colocation->owner_id !== Auth::id() || $category->colocation_id !== $colocation->id) {
             abort(403);
         }

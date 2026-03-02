@@ -16,9 +16,9 @@ class SettlementController extends Controller
         $this->middleware('auth');
     }
 
-    /**
-     * Display settlement view for a colocation
-     */
+    
+     // Display settlement view for a colocation
+     
     public function index(Colocation $colocation)
     {
         // Check authorization
@@ -32,9 +32,9 @@ class SettlementController extends Controller
         return view('settlements.index', compact('colocation', 'settlements', 'payments'));
     }
 
-    /**
-     * Calculate who owes whom
-     */
+    
+     // Calculate who owes whom
+     
     private function calculateSettlements(Colocation $colocation)
     {
         $activeMembers = $colocation->getActiveMembers();
@@ -97,12 +97,12 @@ class SettlementController extends Controller
         ];
     }
 
-    /**
-     * Mark a payment as paid
-     */
+    
+     // Mark a payment as paid
+    
     public function markPaid(Request $request, Colocation $colocation)
     {
-        // Check authorization
+        
         if (!$colocation->isMemberActive(Auth::id())) {
             abort(403);
         }
