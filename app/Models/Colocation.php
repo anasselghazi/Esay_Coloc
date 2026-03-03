@@ -57,9 +57,9 @@ class Colocation extends Model
            ->exists();
    }
 
-   /**
-    * Calculate balance for a given member (positive means credit, negative means owes)
-    */
+   
+    // Calculate balance for a given member (positive means credit, negative means owes)
+    
    public function balanceForUser($userId)
    {
        $activeMembers = $this->getActiveMembers();

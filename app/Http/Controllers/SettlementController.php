@@ -21,7 +21,7 @@ class SettlementController extends Controller
      
     public function index(Colocation $colocation)
     {
-        // Check authorization
+        
         if (!$colocation->isMemberActive(Auth::id())) {
             abort(403);
         }
