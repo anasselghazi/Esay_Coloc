@@ -11,132 +11,137 @@ use Illuminate\Support\Facades\DB;
 
 class SettlementController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
+    
 
     
-     // Display settlement view for a colocation
+     //Afficher la page des règlements (Qui doit payer qui).
      
     public function index(Colocation $colocation)
     {
-        
+        // Vérifier si l'utilisateur est un membre actif de la colocation
         if (!$colocation->isMemberActive(Auth::id())) {
-            abort(403);
+            abort(403, "Désolé, vous n'êtes pas un membre actif de cette colocation.");
         }
 
-        $settlements = $this->calculateSettlements($colocation);
-        $payments = $colocation->payments()->where('status', 'pending')->get();
+        // Appeler la fonction de calcul pour déterminer les dettes et les balances
+        $donnéesCalcul = $this->calculateSettlements($colocation);
+        
+        // Récupérer l'historique des paiements 
+        $paiementsEffectués = $colocation->payments()
+            ->where('status', 'paid')
+            ->latest('paid_at')
+            ->get();
 
-        return view('settlements.index', compact('colocation', 'settlements', 'payments'));
+        return view('settlements.index', [
+            'colocation'     => $colocation,
+            'settlements'    => $donnéesCalcul['settlements'], 
+            'balances'       => $donnéesCalcul['balances'],   
+            'activeMembers'  => $donnéesCalcul['activeMembers'],
+            'payments'       => $paiementsEffectués,  
+        ]  );       
     }
 
     
-     // Calculate who owes whom
+      //Logique de calcul des dettes 
      
     private function calculateSettlements(Colocation $colocation)
     {
-        $activeMembers = $colocation->getActiveMembers();
-        $expenses = $colocation->expenses;
+        $membresActifs = $colocation->getActiveMembers();
+        $dépenses = $colocation->expenses;
 
-        // Calculate total paid by each member
-        $totalPaid = [];
-        foreach ($activeMembers as $member) {
-            $totalPaid[$member->id] = $expenses
-                ->where('payer_id', $member->id)
+        // Calculer le total payé par chaque membre
+        $totalPayéParMembre = [];
+        foreach ($membresActifs as $membre) {
+            $totalPayéParMembre[$membre->id] = $dépenses
+                ->where('payer_id', $membre->id)
                 ->sum('amount');
         }
 
-        // Calculate total expense amount and per-member share
-        $totalAmount = $expenses->sum('amount');
-        $memberCount = $activeMembers->count();
-        $perPersonShare = $memberCount > 0 ? $totalAmount / $memberCount : 0;
+        // 2. Calculer la part théorique par personne (Moyenne)
+        $montantTotal = $dépenses->sum('amount');
+        $nombreMembres = $membresActifs->count();
+        $partParPersonne = $nombreMembres > 0 ? $montantTotal / $nombreMembres : 0;
 
-        // Calculate balances
+        // 3. Calculer les balances 
         $balances = [];
-        foreach ($activeMembers as $member) {
-            $paid = $totalPaid[$member->id] ?? 0;
-            $balances[$member->id] = $paid - $perPersonShare;
-        }
+        $débiteurs = [];  
+        $créanciers = []; 
 
-        // Calculate settlements (who owes whom)
-        $settlements = [];
-        $debtors = [];
-        $creditors = [];
+        foreach ($membresActifs as $membre) {
+            $déjàPayé = $totalPayéParMembre[$membre->id] ?? 0;
+            $solde = $déjàPayé - $partParPersonne;
+            $balances[$membre->id] = $solde;
 
-        foreach ($balances as $userId => $balance) {
-            if ($balance < -0.01) {
-                $debtors[$userId] = abs($balance);
-            } elseif ($balance > 0.01) {
-                $creditors[$userId] = $balance;
+            if ($solde < -0.01) {
+                $débiteurs[$membre->id] = abs($solde);
+            } elseif ($solde > 0.01) {
+                $créanciers[$membre->id] = $solde;
             }
         }
 
-        foreach ($debtors as $debtorId => $debt) {
-            foreach ($creditors as $creditorId => $credit) {
-                if ($credit > 0.01) {
-                    $amount = min($debt, $credit);
-                    $settlements[] = [
-                        'from' => $debtorId,
-                        'from_user' => $activeMembers->find($debtorId),
-                        'to' => $creditorId,
-                        'to_user' => $activeMembers->find($creditorId),
-                        'amount' => round($amount, 2),
+        // 4. Algorithme de compensation pour générer les suggestions de transfert
+        $suggestionsRèglements = [];
+        foreach ($débiteurs as $idDébiteur => $montantDû) {
+            foreach ($créanciers as $idCréancier => $montantÀRecevoir) {
+                if ($montantÀRecevoir > 0.01 && $montantDû > 0.01) {
+                    $montantTransfert = min($montantDû, $montantÀRecevoir);
+
+                    $suggestionsRèglements[] = [
+                        'from_id'   => $idDébiteur,
+                        'from_user' => $membresActifs->find($idDébiteur),
+                        'to_id'     => $idCréancier,
+                        'to_user'   => $membresActifs->find($idCréancier),
+                        'amount'    => round($montantTransfert, 2),
                     ];
-                    $debtors[$debtorId] -= $amount;
-                    $creditors[$creditorId] -= $amount;
+
+                    $montantDû -= $montantTransfert;
+                    $créanciers[$idCréancier] -= $montantTransfert;
                 }
             }
         }
 
         return [
-            'settlements' => $settlements,
-            'balances' => $balances,
-            'activeMembers' => $activeMembers,
+            'settlements'   => $suggestionsRèglements,
+            'balances'      => $balances,
+            'activeMembers' => $membresActifs,
         ];
     }
 
     
-     // Mark a payment as paid
+     // Enregistrer une nouvelle opération de paiement.
     
     public function markPaid(Request $request, Colocation $colocation)
     {
-        
         if (!$colocation->isMemberActive(Auth::id())) {
             abort(403);
         }
 
-        $validated = $request->validate([
+        // Validation des données entrantes
+        $donnéesValidées = $request->validate([
             'from_user_id' => 'required|exists:users,id',
-            'to_user_id' => 'required|exists:users,id',
-            'amount' => 'required|numeric|min:0.01',
+            'to_user_id'   => 'required|exists:users,id',
+            'amount'       => 'required|numeric|min:0.01',
         ]);
 
-        // Create or update payment
-        $payment = Payment::firstOrCreate(
-            [
-                'colocation_id' => $colocation->id,
-                'from_user_id' => $validated['from_user_id'],
-                'to_user_id' => $validated['to_user_id'],
-            ],
-            [
-                'amount' => $validated['amount'],
-                'status' => 'paid',
-                'paid_at' => now(),
-            ]
-        );
+        try {
+            // Utilisation d'une transaction pour garantir l'intégrité des données
+            DB::transaction(function () use ($colocation, $donnéesValidées) {
+                Payment::create([
+                    'colocation_id' => $colocation->id,
+                    'from_user_id'  => $donnéesValidées['from_user_id'],
+                    'to_user_id'    => $donnéesValidées['to_user_id'],
+                    'amount'        => $donnéesValidées['amount'],
+                    'status'        => 'paid',
+                    'paid_at'       => now(),
+                ]);
+            });
 
-        if ($payment->status === 'pending') {
-            $payment->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-                'amount' => $validated['amount'],
-            ]);
+            return redirect()
+                ->route('settlements.index', $colocation)
+                ->with('status', 'Le paiement a été enregistré avec succès.');
+
+        } catch (\Exception $e) {
+            return back()->withErrors("Une erreur est survenue lors de l'enregistrement du paiement.");
         }
-
-        return redirect()
-            ->route('settlements.index', $colocation)
-            ->with('status', 'Paiement enregistré.');
     }
 }

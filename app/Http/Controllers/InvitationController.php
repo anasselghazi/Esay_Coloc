@@ -12,10 +12,7 @@ use Illuminate\Support\Str;
 
 class InvitationController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
+    
 
     
      // Show invitations for a colocation
@@ -79,7 +76,7 @@ class InvitationController extends Controller
             'invited_by' => Auth::id(),
             'email' => $validated['email'],
             'token' => $token,
-            'expires_at' => now()->addDays(7),
+            'expires_at' => now()->addDays(1),
         ]);
 
         // Send email

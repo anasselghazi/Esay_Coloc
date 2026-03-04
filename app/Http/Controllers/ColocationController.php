@@ -9,11 +9,7 @@ use Illuminate\Support\Facades\Auth;
 
 class ColocationController extends Controller
 {
-    public function __construct()
-    {
-        
-        $this->middleware('auth');
-    }
+    
 
     
      

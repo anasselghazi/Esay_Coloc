@@ -21,14 +21,14 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Colocations management
+    // Colocations 
     Route::resource('colocations', ColocationController::class);
     Route::post('colocations/{colocation}/join', [ColocationController::class, 'join'])->name('colocations.join');
     Route::post('colocations/{colocation}/leave', [ColocationController::class, 'leave'])->name('colocations.leave');
     Route::post('colocations/{colocation}/cancel', [ColocationController::class, 'cancel'])->name('colocations.cancel');
     Route::post('colocations/{colocation}/remove-member', [ColocationController::class, 'removeMember'])->name('colocations.remove-member');
 
-    // Expenses management
+    // Expenses
     Route::get('colocations/{colocation}/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
     Route::get('colocations/{colocation}/expenses/create', [ExpenseController::class, 'create'])->name('expenses.create');
     Route::post('colocations/{colocation}/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
@@ -36,7 +36,7 @@ Route::middleware('auth')->group(function () {
     Route::put('colocations/{colocation}/expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
     Route::delete('colocations/{colocation}/expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
 
-    // Categories management
+    // Categories 
     Route::get('colocations/{colocation}/categories', [CategoryController::class, 'index'])->name('categories.index');
     Route::get('colocations/{colocation}/categories/create', [CategoryController::class, 'create'])->name('categories.create');
     Route::post('colocations/{colocation}/categories', [CategoryController::class, 'store'])->name('categories.store');
@@ -44,13 +44,13 @@ Route::middleware('auth')->group(function () {
     Route::put('colocations/{colocation}/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
     Route::delete('colocations/{colocation}/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
-    // Invitations management
+    // Invitations 
     Route::get('colocations/{colocation}/invitations', [InvitationController::class, 'index'])->name('invitations.index');
     Route::get('colocations/{colocation}/invitations/create', [InvitationController::class, 'create'])->name('invitations.create');
     Route::post('colocations/{colocation}/invitations', [InvitationController::class, 'store'])->name('invitations.store');
     Route::delete('colocations/{colocation}/invitations/{invitation}', [InvitationController::class, 'destroy'])->name('invitations.destroy');
 
-    // Invitation acceptance/decline (public routes with auth)
+    // Invitation acceptance/decline 
     Route::get('invitations/respond', [InvitationController::class, 'respondForm'])->name('invitations.respond');
     Route::post('invitations/accept', [InvitationController::class, 'accept'])->name('invitations.accept');
     Route::post('invitations/decline', [InvitationController::class, 'decline'])->name('invitations.decline');

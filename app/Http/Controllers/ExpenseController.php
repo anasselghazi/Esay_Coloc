@@ -10,11 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class ExpenseController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
-
+    
     
      // expenses for a colocation
      
