@@ -20,7 +20,8 @@
                             <p>Bonjour,</p>
                             <p><strong>{{ $invitedBy->name }}</strong> vous a invité à rejoindre la colocation <strong>{{ $colocation->nom }}</strong>.</p>
                             <p>Pour accepter ou refuser l'invitation, cliquez sur le lien ci-dessous :</p>
-                            <p style="text-align:center; margin:30px 0;"><a href="{{ url('/invitations/respond?token='.$token.'&email='.$email) }}" style="background:#6366f1; color:#fff; padding:10px 20px; border-radius:4px; text-decoration:none;">Voir l'invitation</a></p>
+                            <p style="text-align:center; margin:30px 0;"><a href="{{ url('/invitations/respond?token='.$token.'&email='.$email) }}" style="background:#6366f1; color:#fff; padding:10px 20px; border-radius:4px; text-decoration:none;">Voir l'invitation</a></p><br>
+                            {{ url('/invitations/respond?token='.$token.'&email='.$email) }}
                             <p>Si vous ne souhaitez pas rejoindre, vous pouvez ignorer ce message ou cliquer sur ce lien :</p>
                             <p style="text-align:center; margin:20px 0;"><a href="{{ url('/invitations/decline?token='.$token.'&email='.$email) }}" style="color:#6366f1; text-decoration:underline;">Refuser</a></p>
                             <p>Ce lien expirera dans 7 jours.</p>
